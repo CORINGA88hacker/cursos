@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aulas do Curso</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    #topoCurso {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #topoCurso img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 0 8px #00ffffaa;
+    }
+    #topoCurso h2 {
+      margin: 0;
+      font-weight: bold;
+      font-size: 24px;
+      color: #00ffff;
+    }
+    #listaAulas {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .aula-card {
+      background: #222;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .aula-card:hover {
+      background: #00ffff;
+      color: #000;
+    }
+    .aula-titulo {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .btn-voltar {
+      background: #00cccc;
+      color: #121212;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .btn-voltar:hover {
+      background: #00ffff;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-voltar" onclick="voltarCursos()">← Voltar para Cursos</button>
+
+  <div id="topoCurso">
+    <!-- Capa e título do curso vão aparecer aqui -->
+  </div>
+
+  <h1>Aulas do Curso</h1>
+  <div id="listaAulas">Carregando aulas...</div>
+
+  <script>
+    // Config Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBHIc2E4XwRO5FXo4uHlTQVRArOis73MjE",
+      authDomain: "projeto-deus-yato-928-sk-default-rtdb.firebaseapp.com",
+      databaseURL: "https://projeto-deus-yato-928-sk-default-rtdb.firebaseio.com",
+      projectId: "projeto-deus-yato-928-sk-default-rtdb",
+      storageBucket: "projeto-deus-yato-928-sk-default-rtdb.appspot.com",
+      messagingSenderId: "790408726854",
+      appId: "1:790408726854:android:e2f0de7b7d5dba96b0fd47"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Pega id do curso do localStorage
+    const cursoId = localStorage.getItem('cursoSelecionadoId');
+    const listaAulas = document.getElementById('listaAulas');
+    const topoCurso = document.getElementById('topoCurso');
+
+    if (!cursoId) {
+      listaAulas.innerHTML = '<p>Nenhum curso selecionado. Volte e escolha um curso.</p>';
+    } else {
+      // Busca dados do curso para capa e titulo
+      db.ref('cursos/' + cursoId).once('value').then(snapshot => {
+        const curso = snapshot.val();
+        if (curso) {
+          topoCurso.innerHTML = `
+            <img src="${curso.capa}" alt="Capa do curso ${curso.titulo}" />
+            <h2>${curso.titulo}</h2>
+          `;
+        } else {
+          topoCurso.innerHTML = '<p>Curso não encontrado.</p>';
+        }
+      }).catch(() => {
+        topoCurso.innerHTML = '<p>Erro ao carregar dados do curso.</p>';
+      });
+
+      carregarAulas(cursoId);
+    }
+
+    function carregarAulas(cursoId) {
+      listaAulas.innerHTML = 'Carregando aulas...';
+      db.ref('aulas/' + cursoId).once('value').then(snapshot => {
+        listaAulas.innerHTML = '';
+        const aulas = snapshot.val();
+
+        if (!aulas) {
+          listaAulas.innerHTML = '<p>Nenhuma aula cadastrada.</p>';
+          return;
+        }
+
+        Object.entries(aulas).forEach(([id, aula]) => {
+          const div = document.createElement('div');
+          div.className = 'aula-card';
+          div.textContent = aula.titulo;
+          div.onclick = () => {
+            // Abre player.html com link do vídeo no query string
+            window.location.href = `player.html?video=${encodeURIComponent(aula.video)}`;
+          };
+          listaAulas.appendChild(div);
+        });
+      }).catch(err => {
+        listaAulas.innerHTML = `<p>Erro ao carregar aulas: ${err.message}</p>`;
+      });
+    }
+
+    function voltarCursos() {
+      window.location.href = 'curso.html';
+    }
+  </script>
+</body>
+</html>

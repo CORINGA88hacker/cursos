@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Player de Vídeo</title>
+  <style>
+    body {
+      background: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    video, iframe {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00ffff;
+    }
+    h2 {
+      margin-bottom: 20px;
+      color: #0ff;
+    }
+  </style>
+</head>
+<body>
+  <h2>Player de Vídeo</h2>
+  <div id="playerContainer">
+    Carregando vídeo...
+  </div>
+
+  <script>
+    function isYouTubeUrl(url) {
+      return url.includes("youtube.com") || url.includes("youtu.be");
+    }
+
+    function getYouTubeEmbedUrl(url) {
+      let videoId = null;
+      if (url.includes("youtube.com")) {
+        const urlObj = new URL(url);
+        videoId = urlObj.searchParams.get("v");
+      } else if (url.includes("youtu.be")) {
+        videoId = url.split('/').pop();
+      }
+      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : null;
+    }
+
+    function createVideoPlayer(src) {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.autoplay = true;
+      video.src = src;
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.style.background = 'black';
+      return video;
+    }
+
+    function createYouTubePlayer(embedUrl) {
+      const iframe = document.createElement('iframe');
+      iframe.src = embedUrl;
+      iframe.width = "800";
+      iframe.height = "450";
+      iframe.frameBorder = "0";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      return iframe;
+    }
+
+    function loadPlayer() {
+      const params = new URLSearchParams(window.location.search);
+      const videoUrl = params.get('video');
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = '';
+
+      if (!videoUrl) {
+        container.textContent = 'Nenhum vídeo especificado.';
+        return;
+      }
+
+      if (isYouTubeUrl(videoUrl)) {
+        const embedUrl = getYouTubeEmbedUrl(videoUrl);
+        if (embedUrl) {
+          const ytPlayer = createYouTubePlayer(embedUrl);
+          container.appendChild(ytPlayer);
+        } else {
+          container.textContent = 'Link do YouTube inválido.';
+        }
+      } else if (videoUrl.match(/\.(mp4|webm|ogg)$/i)) {
+        const html5Player = createVideoPlayer(videoUrl);
+        container.appendChild(html5Player);
+      } else {
+        container.textContent = 'Formato de vídeo não suportado.';
+      }
+    }
+
+    window.onload = loadPlayer;
+  </script>
+</body>
+</html>

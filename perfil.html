@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Perfil do Usuário</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      text-align: center;
+    }
+    img#fotoPerfil {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #00cccc;
+      cursor: pointer;
+    }
+    input#nomeUsuario {
+      width: 80%;
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 6px;
+      border: none;
+      font-size: 18px;
+      text-align: center;
+      background: #222;
+      color: #eee;
+    }
+    button {
+      background: #00cccc;
+      border: none;
+      color: #000;
+      font-weight: bold;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #00ffff;
+    }
+    #tempoRestante {
+      margin: 15px 0;
+      font-size: 16px;
+      color: #0f0;
+    }
+    /* Modal dialog */
+    #modalFotos {
+      display: none;
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    #modalConteudo {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+      text-align: center;
+    }
+    #modalConteudo img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin: 10px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    #modalConteudo img:hover {
+      border-color: #00cccc;
+    }
+    #btnFecharModal {
+      background: #900;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    /* Setinha voltar */
+    #btnVoltar {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      filter: invert(100%);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <img id="btnVoltar" src="https://img.icons8.com/?size=40&id=24380&format=png" title="Voltar" alt="Voltar" />
+  <h1>Perfil do Usuário</h1>
+
+  <img id="fotoPerfil" src="https://via.placeholder.com/150?text=Sem+Foto" alt="Foto de Perfil" title="Clique para trocar a foto" />
+  <br />
+  <button id="btnAbrirModal">Escolher Foto de Perfil</button>
+
+  <br />
+  <input type="text" id="nomeUsuario" placeholder="Seu nome" />
+  <br />
+  <button id="btnSalvarNome">Salvar Nome</button>
+
+  <div id="tempoRestante">Calculando validade da conta...</div>
+
+  <!-- Modal para fotos -->
+  <div id="modalFotos">
+    <div id="modalConteudo">
+      <h2>Escolha sua foto de perfil</h2>
+      <div id="listaFotosPerfil">Carregando fotos...</div>
+      <button id="btnFecharModal">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    // Config Firebase - coloque seu config aqui
+    const firebaseConfig = {
+      apiKey: "AIzaSyBHIc2E4XwRO5FXo4uHlTQVRArOis73MjE",
+      authDomain: "projeto-deus-yato-928-sk-default-rtdb.firebaseapp.com",
+      databaseURL: "https://projeto-deus-yato-928-sk-default-rtdb.firebaseio.com",
+      projectId: "projeto-deus-yato-928-sk-default-rtdb",
+      storageBucket: "projeto-deus-yato-928-sk-default-rtdb.appspot.com",
+      messagingSenderId: "790408726854",
+      appId: "1:790408726854:android:e2f0de7b7d5dba96b0fd47"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const fotoPerfilImg = document.getElementById('fotoPerfil');
+    const nomeUsuarioInput = document.getElementById('nomeUsuario');
+    const tempoRestanteDiv = document.getElementById('tempoRestante');
+    const btnAbrirModal = document.getElementById('btnAbrirModal');
+    const modalFotos = document.getElementById('modalFotos');
+    const listaFotosPerfil = document.getElementById('listaFotosPerfil');
+    const btnFecharModal = document.getElementById('btnFecharModal');
+    const btnSalvarNome = document.getElementById('btnSalvarNome');
+    const btnVoltar = document.getElementById('btnVoltar');
+
+    // Voltar para página anterior
+    btnVoltar.onclick = () => window.history.back();
+
+    let usuarioAtual = null;
+
+    // Função para calcular e mostrar tempo restante da validade
+    function mostrarTempoRestante(expira_em) {
+      const now = Date.now();
+      const diff = expira_em - now;
+      if(diff <= 0) {
+        tempoRestanteDiv.textContent = "Sua conta expirou.";
+        tempoRestanteDiv.style.color = 'red';
+        return;
+      }
+      const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000*60*60));
+      const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000*60));
+      tempoRestanteDiv.textContent = `Validade da conta: ${dias} dias, ${horas}h e ${minutos}min restantes.`;
+      tempoRestanteDiv.style.color = '#0f0';
+    }
+
+    // Carregar dados do usuário logado
+    function carregarDadosUsuario() {
+      const user = auth.currentUser;
+      if(!user) {
+        alert("Você precisa estar logado.");
+        // aqui pode redirecionar pra login se quiser
+        return;
+      }
+      usuarioAtual = user;
+      db.ref('usuarios/' + user.uid).once('value').then(snapshot => {
+        const dados = snapshot.val() || {};
+
+        // Foto perfil
+        if(dados.fotoPerfil) {
+          fotoPerfilImg.src = dados.fotoPerfil;
+        } else {
+          fotoPerfilImg.src = "https://via.placeholder.com/150?text=Sem+Foto";
+        }
+
+        // Nome
+        nomeUsuarioInput.value = dados.nome || '';
+
+        // Tempo restante
+        if(dados.expira_em) {
+          mostrarTempoRestante(dados.expira_em);
+        } else {
+          tempoRestanteDiv.textContent = "Data de validade não encontrada.";
+          tempoRestanteDiv.style.color = 'yellow';
+        }
+      });
+    }
+
+    // Salvar nome no banco
+    btnSalvarNome.onclick = () => {
+      if(!usuarioAtual) return alert("Usuário não logado");
+      const nome = nomeUsuarioInput.value.trim();
+      if(nome.length < 1) return alert("Digite um nome válido");
+      db.ref('usuarios/' + usuarioAtual.uid).update({ nome })
+        .then(() => alert("Nome salvo com sucesso!"))
+        .catch(e => alert("Erro ao salvar nome: " + e.message));
+    };
+
+    // Abrir diálogo de fotos
+    btnAbrirModal.onclick = () => {
+      modalFotos.style.display = 'flex';
+      carregarFotosPerfil();
+    };
+
+    // Fechar diálogo
+    btnFecharModal.onclick = () => {
+      modalFotos.style.display = 'none';
+    };
+
+    // Carregar fotos do painel para escolher
+    function carregarFotosPerfil() {
+      listaFotosPerfil.innerHTML = 'Carregando fotos...';
+      db.ref('fotosPerfil').once('value').then(snapshot => {
+        const fotos = snapshot.val();
+        listaFotosPerfil.innerHTML = '';
+        if (!fotos) {
+          listaFotosPerfil.innerHTML = '<p>Nenhuma foto enviada.</p>';
+          return;
+        }
+        Object.entries(fotos).forEach(([id, foto]) => {
+          const img = document.createElement('img');
+          img.src = foto.url;
+          img.alt = 'Foto perfil';
+          img.title = 'Clique para usar esta foto no perfil';
+          img.style.cursor = 'pointer';
+          img.onclick = () => {
+            if(!usuarioAtual) return alert("Usuário não logado");
+            db.ref('usuarios/' + usuarioAtual.uid).update({ fotoPerfil: foto.url })
+              .then(() => {
+                fotoPerfilImg.src = foto.url;
+                alert('Foto de perfil atualizada com sucesso!');
+                modalFotos.style.display = 'none';
+              })
+              .catch(e => {
+                console.error('Erro ao atualizar foto de perfil:', e);
+                alert('Erro ao atualizar foto de perfil: ' + e.message);
+              });
+          };
+          listaFotosPerfil.appendChild(img);
+        });
+      }).catch(e => {
+        console.error('Erro ao carregar fotos:', e);
+        listaFotosPerfil.innerHTML = '<p>Erro ao carregar fotos.</p>';
+      });
+    }
+
+    // Monitorar estado de autenticação
+    auth.onAuthStateChanged(user => {
+      if(user) {
+        carregarDadosUsuario();
+      } else {
+        alert("Você não está logado. Por favor, faça login.");
+        // aqui você pode redirecionar para login.html
+      }
+    });
+  </script>
+</body>
+</html>

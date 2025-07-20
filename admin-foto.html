@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel Admin Simples</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: auto;
+      padding: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background: #222;
+    }
+    tr:nth-child(even) {
+      background: #1e1e1e;
+    }
+  </style>
+</head>
+<body>
+  <h1>Painel Admin Básico</h1>
+
+  <h2>Usuários Cadastrados</h2>
+  <table id="tabelaUsuarios">
+    <thead>
+      <tr><th>Email</th><th>Expira em</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Cursos Cadastrados</h2>
+  <ul id="listaCursos"></ul>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBHIc2E4XwRO5FXo4uHlTQVRArOis73MjE",
+      authDomain: "projeto-deus-yato-928-sk-default-rtdb.firebaseapp.com",
+      databaseURL: "https://projeto-deus-yato-928-sk-default-rtdb.firebaseio.com",
+      projectId: "projeto-deus-yato-928-sk-default-rtdb",
+      storageBucket: "projeto-deus-yato-928-sk-default-rtdb.appspot.com",
+      messagingSenderId: "790408726854",
+      appId: "1:790408726854:android:e2f0de7b7d5dba96b0fd47"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const db = firebase.database();
+
+    function carregarUsuarios() {
+      const tbody = document.querySelector('#tabelaUsuarios tbody');
+      tbody.innerHTML = 'Carregando...';
+      db.ref('usuarios').once('value')
+        .then(snapshot => {
+          const usuarios = snapshot.val();
+          if (!usuarios) {
+            tbody.innerHTML = '<tr><td colspan="2">Nenhum usuário cadastrado.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = '';
+          Object.entries(usuarios).forEach(([uid, user]) => {
+            const dataExpira = new Date(user.expira_em);
+            tbody.innerHTML += `<tr><td>${user.email}</td><td>${dataExpira.toLocaleDateString('pt-BR')}</td></tr>`;
+          });
+        })
+        .catch(e => {
+          console.error('Erro ao carregar usuários:', e);
+          tbody.innerHTML = '<tr><td colspan="2">Erro ao carregar usuários.</td></tr>';
+        });
+    }
+
+    function carregarCursos() {
+      const lista = document.getElementById('listaCursos');
+      lista.innerHTML = 'Carregando...';
+      db.ref('cursos').once('value')
+        .then(snapshot => {
+          const cursos = snapshot.val();
+          if (!cursos) {
+            lista.innerHTML = '<li>Nenhum curso cadastrado.</li>';
+            return;
+          }
+          lista.innerHTML = '';
+          Object.entries(cursos).forEach(([id, curso]) => {
+            lista.innerHTML += `<li>${curso.titulo}</li>`;
+          });
+        })
+        .catch(e => {
+          console.error('Erro ao carregar cursos:', e);
+          lista.innerHTML = '<li>Erro ao carregar cursos.</li>';
+        });
+    }
+
+    window.onload = () => {
+      carregarUsuarios();
+      carregarCursos();
+    };
+  </script>
+</body>
+</html>

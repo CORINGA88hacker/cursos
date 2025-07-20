@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Escolher Foto de Perfil</title>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 20px;
+      position: relative;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #f97316;
+    }
+    a.voltar-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 999;
+      display: inline-block;
+    }
+    a.voltar-btn img {
+      width: 40px;
+      height: 40px;
+      filter: invert(100%);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    a.voltar-btn img:hover {
+      transform: scale(1.1);
+    }
+    .lista-fotos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(100px,1fr));
+      gap: 15px;
+    }
+    .foto-item {
+      cursor: pointer;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 10px #f9731680;
+      transition: transform 0.2s ease;
+    }
+    .foto-item:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px #f97316cc;
+    }
+    .foto-item img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      display: block;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="javascript:history.back()" class="voltar-btn" title="Voltar">
+    <img src="https://img.icons8.com/?size=40&id=24380&format=png" alt="Voltar" />
+  </a>
+
+  <h1>Escolha uma Foto de Perfil</h1>
+
+  <div class="lista-fotos" id="listaFotos"></div>
+
+  <script>
+    // Exemplo de imagens para escolher - você pode trocar ou adicionar URLs aqui
+    const imagens = [
+      "https://i.imgur.com/1Q9Z1ZQ.jpg",
+      "https://i.imgur.com/VtC7eGQ.jpg",
+      "https://i.imgur.com/2Y3Q8QS.jpg",
+      "https://i.imgur.com/Wz0lXvY.jpg",
+      "https://i.imgur.com/qCkX3oH.jpg",
+      "https://i.imgur.com/ZQZVWqI.jpg",
+      "https://i.imgur.com/1bX5QH6.jpg",
+      "https://i.imgur.com/DvpvklR.png",
+      "https://i.imgur.com/6TrYvSC.jpg"
+    ];
+
+    const listaFotos = document.getElementById('listaFotos');
+
+    imagens.forEach(url => {
+      const div = document.createElement('div');
+      div.className = 'foto-item';
+      div.innerHTML = `<img src="${url}" alt="Foto de Perfil" />`;
+      div.onclick = () => {
+        localStorage.setItem('fotoSelecionada', url);
+        alert('Foto selecionada! Voltando ao perfil...');
+        // volta para perfil.html (ou página anterior)
+        window.history.back();
+      };
+      listaFotos.appendChild(div);
+    });
+  </script>
+</body>
+</html>

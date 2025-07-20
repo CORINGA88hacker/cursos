@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel Admin - Gerenciamento Completo</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      border-bottom: 2px solid #00cccc;
+      padding-bottom: 6px;
+      margin-top: 30px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: none;
+      background: #222;
+      color: #eee;
+      box-sizing: border-box;
+    }
+    button {
+      background: #00cccc;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #00ffff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background: #222;
+    }
+    tr:nth-child(even) {
+      background: #1e1e1e;
+    }
+    .btn-small {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    .edit-input {
+      width: 60px;
+      background: #333;
+      border-radius: 4px;
+      color: white;
+      border: none;
+      padding: 4px;
+      text-align: center;
+    }
+    .card {
+      background: #222;
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 8px;
+      position: relative;
+    }
+    .curso-excluir {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 22px;
+      cursor: pointer;
+      filter: brightness(0.8);
+      transition: filter 0.3s;
+    }
+    .curso-excluir:hover {
+      filter: brightness(1);
+    }
+    .curso-img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+    #areaAulas input {
+      width: calc(50% - 10px);
+      display: inline-block;
+      margin-right: 10px;
+    }
+    #btnAddAula {
+      width: 35px;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Painel Admin</h1>
+
+  <h2>Criar Usuário</h2>
+  <input type="email" id="emailUser" placeholder="Email" />
+  <input type="password" id="senhaUser" placeholder="Senha" />
+  <input type="number" id="diasUser" placeholder="Dias de validade" min="1" />
+  <button onclick="criarUsuario()">Criar Usuário</button>
+  <div id="msgUsuario"></div>
+
+  <h2>Usuários Cadastrados</h2>
+  <table id="tabelaUsuarios">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Expira em</th>
+        <th>Alterar validade (dias)</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Criar Curso</h2>
+  <input type="text" id="tituloCurso" placeholder="Título do curso" />
+  <input type="text" id="capaCurso" placeholder="URL da capa do curso" />
+  <button onclick="criarCurso()">Criar Curso</button>
+  <div id="msgCurso"></div>
+
+  <h2>Cursos Cadastrados</h2>
+  <div id="listaCursos"></div>
+
+  <div id="areaAulas" style="display:none;">
+    <h2>Aulas do curso: <span id="nomeCursoSelecionado"></span></h2>
+    <input type="text" id="tituloAula" placeholder="Título da aula" />
+    <input type="text" id="linkAula" placeholder="Link do vídeo" />
+    <img
+      id="btnAddAula"
+      src="https://img.icons8.com/?size=48&id=cAd29bV1wGyF&format=png"
+      alt="Adicionar Episódio"
+      title="Adicionar Episódio"
+      onclick="adicionarAula()"
+    />
+    <div id="msgAula"></div>
+    <div id="listaAulas"></div>
+    <button onclick="fecharAulas()">Fechar aulas</button>
+  </div>
+
+  <script>
+    // Config Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBHIc2E4XwRO5FXo4uHlTQVRArOis73MjE",
+      authDomain: "projeto-deus-yato-928-sk-default-rtdb.firebaseapp.com",
+      databaseURL: "https://projeto-deus-yato-928-sk-default-rtdb.firebaseio.com",
+      projectId: "projeto-deus-yato-928-sk-default-rtdb",
+      storageBucket: "projeto-deus-yato-928-sk-default-rtdb.appspot.com",
+      messagingSenderId: "790408726854",
+      appId: "1:790408726854:android:e2f0de7b7d5dba96b0fd47"
+    };
+
+    // Inicializa o Firebase apenas uma vez
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function criarUsuario() {
+      const email = document.getElementById('emailUser').value.trim();
+      const senha = document.getElementById('senhaUser').value;
+      const dias = parseInt(document.getElementById('diasUser').value);
+      const msg = document.getElementById('msgUsuario');
+      msg.style.color = 'red';
+      msg.textContent = '';
+
+      if (!email || !senha || isNaN(dias) || dias < 1) {
+        msg.textContent = 'Preencha todos os campos corretamente.';
+        return;
+      }
+
+      auth.createUserWithEmailAndPassword(email, senha)
+        .then(({ user }) => {
+          return db.ref('usuarios/' + user.uid).set({
+            email,
+            expira_em: Date.now() + dias * 24 * 60 * 60 * 1000
+          });
+        })
+        .then(() => {
+          msg.style.color = '#0f0';
+          msg.textContent = 'Usuário criado com sucesso.';
+          document.getElementById('emailUser').value = '';
+          document.getElementById('senhaUser').value = '';
+          document.getElementById('diasUser').value = '';
+          carregarUsuarios();
+        })
+        .catch(e => {
+          console.error(e);
+          msg.textContent = 'Erro: ' + e.message;
+        });
+    }
+
+    function carregarUsuarios() {
+      const tbody = document.querySelector('#tabelaUsuarios tbody');
+      tbody.innerHTML = 'Carregando usuários...';
+      db.ref('usuarios').once('value').then(snapshot => {
+        const usuarios = snapshot.val();
+        tbody.innerHTML = '';
+        if (!usuarios) {
+          tbody.innerHTML = '<tr><td colspan="4">Nenhum usuário cadastrado.</td></tr>';
+          return;
+        }
+
+        Object.entries(usuarios).forEach(([uid, user]) => {
+          const dataExpira = new Date(user.expira_em);
+          const dataFormatada = dataExpira.toLocaleDateString('pt-BR');
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${user.email}</td>
+            <td>${dataFormatada}</td>
+            <td>
+              <input type="number" class="edit-input" min="1" value="${Math.ceil((user.expira_em - Date.now())/(1000*60*60*24))}" data-uid="${uid}" />
+              <button class="btn-small" onclick="atualizarValidade('${uid}')">Salvar</button>
+            </td>
+            <td>
+              <img 
+                src="https://cdn-icons-png.flaticon.com/128/2602/2602735.png"
+                alt="Excluir"
+                title="Excluir usuário"
+                style="width:20px; cursor:pointer;"
+                onclick="deletarUsuario('${uid}')"
+              />
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).catch(e => {
+        console.error('Erro ao carregar usuários:', e);
+      });
+    }
+
+    function atualizarValidade(uid) {
+      const input = document.querySelector(`input[data-uid="${uid}"]`);
+      const dias = parseInt(input.value);
+      if (isNaN(dias) || dias < 1) {
+        alert('Digite um número válido de dias.');
+        return;
+      }
+      const novoExpira = Date.now() + dias * 24 * 60 * 60 * 1000;
+      db.ref('usuarios/' + uid).update({ expira_em: novoExpira }).then(() => {
+        alert('Validade atualizada.');
+        carregarUsuarios();
+      }).catch(e => {
+        console.error('Erro ao atualizar validade:', e);
+      });
+    }
+
+    function deletarUsuario(uid) {
+      if (!confirm('Deseja realmente excluir esse usuário?')) return;
+      db.ref('usuarios/' + uid).remove()
+        .then(() => {
+          alert('Usuário removido do banco de dados.');
+          carregarUsuarios();
+        })
+        .catch(e => alert('Erro: ' + e.message));
+    }
+
+    function criarCurso() {
+      const titulo = document.getElementById('tituloCurso').value.trim();
+      const capa = document.getElementById('capaCurso').value.trim();
+      const msg = document.getElementById('msgCurso');
+      msg.style.color = 'red';
+      msg.textContent = '';
+
+      if (!titulo || !capa) {
+        msg.textContent = 'Preencha título e capa do curso.';
+        return;
+      }
+
+      db.ref('cursos').push({ titulo, capa })
+        .then(() => {
+          msg.style.color = '#0f0';
+          msg.textContent = 'Curso criado com sucesso.';
+          document.getElementById('tituloCurso').value = '';
+          document.getElementById('capaCurso').value = '';
+          carregarCursos();
+        })
+        .catch(e => {
+          console.error('Erro ao criar curso:', e);
+          msg.textContent = 'Erro: ' + e.message;
+        });
+    }
+
+    function carregarCursos() {
+      const lista = document.getElementById('listaCursos');
+      lista.innerHTML = 'Carregando cursos...';
+      db.ref('cursos').once('value').then(snapshot => {
+        const cursos = snapshot.val() || {};
+        lista.innerHTML = '';
+        if (!cursos || Object.keys(cursos).length === 0) {
+          lista.innerHTML = '<p>Nenhum curso cadastrado.</p>';
+          return;
+        }
+
+        Object.entries(cursos).forEach(([id, curso]) => {
+          const div = document.createElement('div');
+          div.classList.add('card');
+          div.style.cursor = 'pointer';
+          div.innerHTML = `
+            <strong>${curso.titulo}</strong>
+            <img src="${curso.capa}" alt="${curso.titulo}" class="curso-img" />
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/2602/2602735.png"
+              alt="Excluir"
+              title="Excluir curso"
+              class="curso-excluir"
+              onclick="deletarCurso('${id}')"
+            />
+          `;
+          div.onclick = (e) => {
+            if(e.target.classList.contains('curso-excluir')) return;
+            mostrarAulas(id, curso.titulo);
+          };
+          lista.appendChild(div);
+        });
+      }).catch(e => {
+        console.error('Erro ao carregar cursos:', e);
+      });
+    }
+
+    function deletarCurso(id) {
+      if (!confirm('Deseja realmente excluir esse curso?')) return;
+      db.ref('cursos/' + id).remove()
+        .then(() => {
+          alert('Curso removido.');
+          carregarCursos();
+        })
+        .catch(e => alert('Erro: ' + e.message));
+    }
+
+    let cursoSelecionadoId = null;
+
+    function mostrarAulas(id, titulo) {
+      cursoSelecionadoId = id;
+      document.getElementById('nomeCursoSelecionado').textContent = titulo;
+      document.getElementById('areaAulas').style.display = 'block';
+      carregarAulas(id);
+    }
+
+    function fecharAulas() {
+      document.getElementById('areaAulas').style.display = 'none';
+      cursoSelecionadoId = null;
+    }
+
+    function adicionarAula() {
+      const titulo = document.getElementById('tituloAula').value.trim();
+      const link = document.getElementById('linkAula').value.trim();
+      const msg = document.getElementById('msgAula');
+      msg.style.color = 'red';
+      msg.textContent = '';
+
+      if (!cursoSelecionadoId) {
+        msg.textContent = 'Nenhum curso selecionado.';
+        return;
+      }
+      if (!titulo || !link) {
+        msg.textContent = 'Preencha título e link do vídeo.';
+        return;
+      }
+
+      db.ref('aulas/' + cursoSelecionadoId).push({
+        titulo,
+        video: link
+      }).then(() => {
+        msg.style.color = '#0f0';
+        msg.textContent = 'Aula adicionada com sucesso!';
+        document.getElementById('tituloAula').value = '';
+        document.getElementById('linkAula').value = '';
+        carregarAulas(cursoSelecionadoId);
+      }).catch(e => {
+        console.error('Erro ao adicionar aula:', e);
+        msg.textContent = 'Erro: ' + e.message;
+      });
+    }
+
+    function carregarAulas(cursoId) {
+      const lista = document.getElementById('listaAulas');
+      lista.innerHTML = 'Carregando aulas...';
+      db.ref('aulas/' + cursoId).once('value').then(snapshot => {
+        lista.innerHTML = '';
+        const aulas = snapshot.val();
+        if (!aulas) {
+          lista.innerHTML = '<p>Nenhuma aula cadastrada.</p>';
+          return;
+        }
+        Object.entries(aulas).forEach(([id, aula]) => {
+          const div = document.createElement('div');
+          div.classList.add('card');
+          div.innerHTML = `
+            <strong>${aula.titulo}</strong>
+            <br>
+            <a href="${aula.video}" target="_blank" style="color:#0ff;">Assistir vídeo</a>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/128/2602/2602735.png" 
+              alt="Excluir" 
+              title="Excluir aula" 
+              style="width:20px; cursor:pointer; margin-left:10px; vertical-align:middle;" 
+              onclick="deletarAula('${cursoId}', '${id}')"
+            />
+          `;
+          lista.appendChild(div);
+        });
+      }).catch(e => {
+        console.error('Erro ao carregar aulas:', e);
+        lista.innerHTML = '<p>Erro ao carregar aulas.</p>';
+      });
+    }
+
+    function deletarAula(cursoId, aulaId) {
+      if (!confirm('Deseja realmente excluir essa aula?')) return;
+      db.ref('aulas/' + cursoId + '/' + aulaId).remove()
+        .then(() => {
+          alert('Aula removida.');
+          carregarAulas(cursoId);
+        })
+        .catch(e => alert('Erro: ' + e.message));
+    }
+
+    window.onload = () => {
+      carregarUsuarios();
+      carregarCursos();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home - Cursos</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+    }
+    #logout-btn {
+      background-color: #007bff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+    }
+    #logout-btn:hover {
+      background-color: #0056b3;
+    }
+    .cursos-grid {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
+      gap: 15px;
+    }
+    .curso-card {
+      background-color: #1e1e1e;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      height: 300px;
+    }
+    .curso-card:hover {
+      transform: scale(1.05);
+    }
+    .curso-capa {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #333;
+    }
+    .curso-info {
+      padding: 15px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .curso-titulo {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0;
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="firebase.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Meus Cursos</h1>
+    <button id="logout-btn">Sair</button>
+  </header>
+
+  <div class="cursos-grid" id="cursos-lista">Carregando cursos...</div>
+
+  <script>
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        carregarCursos();
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    });
+
+    function carregarCursos() {
+      const div = document.getElementById("cursos-lista");
+      div.innerHTML = "";
+      db.ref("cursos").once("value").then(snapshot => {
+        if (!snapshot.exists()) {
+          div.innerHTML = "<p>Nenhum curso disponível.</p>";
+          return;
+        }
+        snapshot.forEach(cursoSnap => {
+          const curso = cursoSnap.val();
+          const id = cursoSnap.key;
+          const capa = curso.capa || "";
+          const titulo = curso.titulo || "Sem título";
+
+          const card = document.createElement("div");
+          card.classList.add("curso-card");
+          card.onclick = () => {
+            window.location.href = `curso.html?id=${id}`;
+          };
+
+          const img = document.createElement("img");
+          img.src = capa;
+          img.alt = titulo;
+          img.classList.add("curso-capa");
+
+          const info = document.createElement("div");
+          info.classList.add("curso-info");
+
+          const h3 = document.createElement("h3");
+          h3.classList.add("curso-titulo");
+          h3.textContent = titulo;
+
+          info.appendChild(h3);
+          card.appendChild(img);
+          card.appendChild(info);
+          div.appendChild(card);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
